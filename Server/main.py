@@ -1,26 +1,28 @@
 from flask import Flask, jsonify
-import win32com.client  # This can interact with windows processes
-import time
+import asyncio
+
+from winsdk.windows.media.control import \
+    GlobalSystemMediaTransportControlsSessionManager as MediaManager
 
 app = Flask(__name__)
 
-def get_current_playing():
-    try:
-        #From what i've read, this works with spotify so I hope it works with Amazon.
-        wmi = win32com.client.GetObject('winmgmts:')
+#This helped a lot, just changing the winrt to winsdk 
+#https://github.com/curtisgibby/winrt-slack-python/blob/master/winrt-track-change-to-slack.py#L177-L183
 
-        for process in wmi.InstancesOf('Win32_Process'):
-            if process.Name.lower() == 'amazon music.exe':
-                return process.Caption
-        return "No song playing"
-    
-    except Exception as e:
-        return str(e)
+async def get_media_info():
+    sessions = await MediaManager.request_async()
+    current_session = sessions.get_current_session()
+    if current_session:  # there needs to be a media session running
+        info = await current_session.try_get_media_properties_async()
+        info_dict = {song_attr: info.__getattribute__(song_attr) for song_attr in dir(info) if song_attr[0] != '_'}
+        concat = info_dict['title'] + " By " + info_dict['artist']
+        return concat
+
 
 @app.route('/now-playing', methods=['GET'])
 def now_playing():
-    playing_info = get_currently_playing()
-    return jsonify({'now_playing': playing_info})
+    current_media_info = asyncio.run(get_media_info())
+    return jsonify({'now_playing': current_media_info})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
