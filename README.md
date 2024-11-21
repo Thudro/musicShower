@@ -7,4 +7,4 @@ Please note the code comments are for me to understand what I was doing, and thi
 How to use:
 1. run main.py in the server folder.
 2. Configure ip in Client\main.py
-3. The server should be running on http://localhost:5000
+3. The server should be running on http://localhost:8000
